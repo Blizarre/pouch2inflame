@@ -1,0 +1,15 @@
+consumer_key = "YOUR_APP_KEY"
+redirect_uri = "https://www.getpocket.com"
+
+[smtp]
+server = "smtp.yourprovider.com"
+user = "YOUR_USER_NAME"
+port = 465
+password = "YOUR_PASSWORD"
+email_from = "you@yourprovider.com" # Must be whitelisted on the kindle website
+
+[accounts]
+
+[accounts.USER_NAME]
+access_token = "aaa-aaa-aaa"  # Get one by running `python3 main.py get_token`
+destination_email = "a@b.com" # destination address for the epub file (kindle)

@@ -30,12 +30,16 @@ One of the goal of that project was to keep the installation simple and lightwei
 cp config.toml.template config.toml
 # Edit the fields inside the configuration file
 ```
-4. Get a token for your user. You will have to authenticate to pocket
+4. Build the docker container containing the conversion pipeline
+```
+make docker_build
+```
+5. Get a token for your user. You will have to authenticate to pocket
 ```
 python  main.py get_token
 ```
-5. Update the accounts.USER_NAME entry with your name, token, and kindle address
-6. Run main.py every time you want to fetch and send the articles(use a crontab)
+6. Update the accounts.USER_NAME entry with your name, token, and kindle address
+7. Run main.py every time you want to fetch and send the articles(use a crontab)
 ```
 python  main.py process_and_send
 ```

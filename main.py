@@ -129,7 +129,7 @@ def get_list_of_articles(consumer_key: str, access_token: str) -> List[Dict[str,
     articles = response["list"]
     if isinstance(articles, type({})):
         return articles.values()
-    elif isinstance(articles, type([])):
+    if isinstance(articles, type([])):
         return articles
 
     raise UnexpectedPocketReponseException(
@@ -196,8 +196,7 @@ def get_token(config: Config, _args: Namespace):
             "redirect_uri": config.redirect_uri,
         },
     )
-    oauth_request.raise_for_status()
-    code = oauth_request.json()["code"]
+    code = oauth_request["code"]
     print(f"Received code {code}, please login at:")
     print(
         f"https://getpocket.com/auth/authorize?request_token={code}&"
@@ -214,8 +213,7 @@ def get_token(config: Config, _args: Namespace):
             "code": code,
         },
     )
-    auth_request.raise_for_status()
-    print(f"Authentication successful, credentials:\n{auth_request.json()}")
+    print(f"Authentication successful, credentials:\n{auth_request}")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,7 @@
 consumer_key = "YOUR_APP_KEY"
+
+# This URL doesn't really matter. We are just asking pocket to redirect us there after
+# a successful authentication during the key generation process
 redirect_uri = "https://www.getpocket.com"
 
 [smtp]

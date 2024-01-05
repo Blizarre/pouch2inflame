@@ -1,19 +1,15 @@
 # pull official base image
-FROM python:3-slim
-
-
-# set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+FROM debian:bookworm
 
 RUN useradd -ms /bin/bash app
 
-RUN --mount=type=cache,target=/var/cache/apt \
-    apt-get update && apt-get -y install pandoc npm
+RUN --mount=id=aptextractor,sharing=private,type=cache,target=/var/cache/apt \
+    apt-get update && apt-get -y install --no-install-recommends --no-install-suggests \
+    pandoc npm
 
-WORKDIR /opt/convert
-RUN --mount=type=bind,source=./convert/package-lock.json,target=package-lock.json \
-    npm ci
+WORKDIR /opt/extractor
+COPY extractor/package-lock.json extractor/package.json .
+COPY extractor/src/cli.js ./src/cli.js
 
-COPY convert/main.js .
+run npm install -g
 USER app

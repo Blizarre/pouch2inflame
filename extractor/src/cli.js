@@ -1,3 +1,5 @@
+#! /usr/bin/env node
+
 import Readability from '@mozilla/readability';
 import JSDOM from 'jsdom';
 import fetch from 'node-fetch';

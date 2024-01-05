@@ -1,9 +1,22 @@
 {
+  "name": "extractor",
+  "version": "1.0.0",
+  "description": "Extract the text of a webpage using readibility.js",
+  "main": "src/cli.js",
   "dependencies": {
     "@mozilla/readability": "^0.5.0",
     "canvas": "^2.11.2",
     "jsdom": "^23.0.1",
     "node-fetch": "^3.3.2"
   },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "extractor": "./src/cli.js"
+  },
+  "author": "Simon Marache-Francisco",
+  "license": "GPL-3.0-or-later",
   "type": "module"
 }

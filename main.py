@@ -2,6 +2,7 @@ import json
 import os
 import smtplib
 import tempfile
+import time
 import tomllib
 from argparse import ArgumentParser, Namespace
 from copy import deepcopy
@@ -11,6 +12,10 @@ from subprocess import PIPE, Popen
 from typing import Any, Dict, List
 from urllib import request
 from urllib.parse import quote
+
+
+class UnexpectedPocketReponseException(BaseException):
+    pass
 
 
 @dataclass
@@ -79,7 +84,7 @@ def http_post_json(url: str, data: Any) -> Any:
 
 
 def run_in_docker(command: List[str], **kwargs) -> Popen[str]:
-    return Popen(["docker", "run", "-it", "convert:latest"] + command, **kwargs)
+    return Popen(["docker", "run", "converter:latest"] + command, **kwargs)
 
 
 def send_arbitrary_file(config: Config, args: Namespace):
@@ -110,20 +115,38 @@ def send_epub_by_email(user: UserConfig, smtp: SMTPConfig, epub_file: str):
         )
 
 
+def get_list_of_articles(consumer_key: str, access_token: str) -> List[Dict[str, Any]]:
+    response = http_post_json(
+        "https://getpocket.com/v3/get",
+        {
+            "consumer_key": consumer_key,
+            "access_token": access_token,
+            "contentType": "article",
+        },
+    )
+    # The API return either an empty list or a dict of values. The rules there aren't
+    # really clear.
+    articles = response["list"]
+    if isinstance(articles, type({})):
+        return articles.values()
+    elif isinstance(articles, type([])):
+        return articles
+
+    raise UnexpectedPocketReponseException(
+        "Unknown return type from the get api. Value is f{articles}"
+    )
+
+
 def process_and_send_emails(config: Config, _args: Namespace):
     for user in config.users:
-        response = http_post_json(
-            "https://getpocket.com/v3/get",
-            {
-                "consumer_key": config.consumer_key,
-                "access_token": user.access_token,
-                "contentType": "article",
-            },
-        )
-        articles = {it["resolved_title"]: it["resolved_url"] for it in response["list"]}
-        for title, url in articles.items():
+        print(f"Processing pocket entries for '{user.username}'")
+        for article in get_list_of_articles(config.consumer_key, user.access_token):
+            title = article["resolved_title"]
+            url = article["resolved_url"]
+            item_id = article["item_id"]
+            print(f"  Processing article '{title}'")
             with tempfile.NamedTemporaryFile() as tmpfile:
-                extractor = run_in_docker(["node", "convert/main.js", url], stdout=PIPE)
+                extractor = run_in_docker(["extractor", url], stdout=PIPE)
                 epub_converter = run_in_docker(
                     [
                         "pandoc",
@@ -149,9 +172,20 @@ def process_and_send_emails(config: Config, _args: Namespace):
                     )
                 else:
                     send_epub_by_email(user, config.smtp, tmpfile.name)
-
-                print(f"EPUB file created in {tmpfile.name}")
-        print(f"Sending via {config.smtp.server}")
+                http_post_json(
+                    "https://getpocket.com/v3/send",
+                    {
+                        "consumer_key": config.consumer_key,
+                        "access_token": user.access_token,
+                        "actions": [
+                            {
+                                "action": "archive",
+                                "item_id": item_id,
+                                "time": time.time(),
+                            }
+                        ],
+                    },
+                )
 
 
 def get_token(config: Config, _args: Namespace):

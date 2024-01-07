@@ -1,6 +1,4 @@
-from datetime import datetime
 import json
-import os
 import smtplib
 import tempfile
 import time
@@ -8,10 +6,11 @@ import tomllib
 from argparse import ArgumentParser, Namespace
 from copy import deepcopy
 from dataclasses import dataclass
+from datetime import datetime
 from email.message import EmailMessage
 from email.utils import format_datetime
 from subprocess import PIPE, Popen
-from typing import Any, Dict, List, IO
+from typing import IO, Any, Dict, List
 from urllib import request
 from urllib.parse import quote
 
@@ -136,7 +135,7 @@ def get_list_of_articles(consumer_key: str, access_token: str) -> List[Dict[str,
         return articles
 
     raise UnexpectedPocketReponseException(
-        "Unknown return type from the get api. Value is f{articles}"
+        f"Unknown return type from the get api. Value is f{articles}"
     )
 
 

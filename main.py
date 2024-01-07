@@ -1,5 +1,6 @@
 import json
 import smtplib
+from time import sleep
 import tempfile
 import time
 import tomllib
@@ -64,6 +65,10 @@ class Config:
     @property
     def redirect_uri(self) -> str:
         return self._config.get("redirect_uri", "https://www.getpocket.com")
+
+    @property
+    def sleep_between_articles(self) -> float:
+        return self._config.get("sleep_between_articles", 10.0)
 
 
 def http_post_json(url: str, data: Any) -> Any:
@@ -191,6 +196,7 @@ def process_and_send_emails(config: Config, _args: Namespace):
                         ],
                     },
                 )
+                sleep(config.sleep_between_articles)
 
 
 def get_token(config: Config, _args: Namespace):

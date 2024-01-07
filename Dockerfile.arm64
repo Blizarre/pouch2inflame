@@ -1,0 +1,21 @@
+# pull official base image
+FROM debian:bookworm
+
+RUN useradd -ms /bin/bash app
+
+RUN --mount=id=aptextractor,sharing=private,type=cache,target=/var/cache/apt \
+    apt-get update && apt-get -y install --no-install-recommends --no-install-suggests \
+    pandoc npm
+
+# node -> cairo -> node-pre-gyp dependencies, node-pre-gyp needs to be built from sources on arm64
+# https://github.com/mapbox/node-pre-gyp/issues/348
+RUN --mount=id=aptextractor,sharing=private,type=cache,target=/var/cache/apt \
+    apt-get update && apt-get -y install --no-install-recommends --no-install-suggests \
+    build-essential libpixman-1-dev pkg-config libcairo2-dev librust-pangocairo-dev
+
+WORKDIR /opt/extractor
+COPY extractor/package-lock.json extractor/package.json .
+COPY extractor/src/cli.js ./src/cli.js
+
+run npm install -g --from-sources
+USER app

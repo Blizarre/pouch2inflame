@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import os
 import smtplib
@@ -8,8 +9,9 @@ from argparse import ArgumentParser, Namespace
 from copy import deepcopy
 from dataclasses import dataclass
 from email.message import EmailMessage
+from email.utils import format_datetime
 from subprocess import PIPE, Popen
-from typing import Any, Dict, List
+from typing import Any, Dict, List, IO
 from urllib import request
 from urllib.parse import quote
 
@@ -64,12 +66,6 @@ class Config:
     def redirect_uri(self) -> str:
         return self._config.get("redirect_uri", "https://www.getpocket.com")
 
-    @property
-    def docker_prefix(self) -> List[str]:
-        return self.config.get(
-            "docker_prefix", ["docker", "run", "-it", "convert:latest"]
-        )
-
 
 def http_post_json(url: str, data: Any) -> Any:
     """reimplementing the `requests` library. It's not worth
@@ -84,27 +80,34 @@ def http_post_json(url: str, data: Any) -> Any:
 
 
 def run_in_docker(command: List[str], **kwargs) -> Popen[str]:
-    return Popen(["docker", "run", "converter:latest"] + command, **kwargs)
+    return Popen(
+        ["sudo", "docker", "run", "-i", "converter:latest"] + command, **kwargs
+    )
 
 
 def send_arbitrary_file(config: Config, args: Namespace):
     for user in config.users:
         if user.username == args.username:
-            send_epub_by_email(user, config.smtp, args.filename)
+            with open(args.filename, "rb") as epub_fd:
+                send_epub_by_email(user, config.smtp, epub_fd)
 
 
-def send_epub_by_email(user: UserConfig, smtp: SMTPConfig, epub_file: str):
+def send_epub_by_email(user: UserConfig, smtp: SMTPConfig, epub_fd: IO):
+    content = epub_fd.read()
+    print(f"  Sending file ({len(content)} bytes) to {user.destination_email}")
+
     message = EmailMessage()
-    message.make_mixed()
     message["From"] = smtp.email_from
     message["To"] = user.destination_email
-    with open(epub_file, "rb") as epub_fd:
-        message.add_attachment(
-            epub_fd.read(),
-            maintype="application",
-            subtype="epub+zip",
-            filename=os.path.basename(epub_file),
-        )
+    message["Subject"] = "epub file for kindle"
+    message["Date"] = format_datetime(datetime.now())
+    message.set_content("Kindle, please import the epub file attached to that email")
+    message.add_attachment(
+        content,
+        maintype="application",
+        subtype="epub+zip",
+        filename=f"{datetime.now().date()}.epub",
+    )
 
     with smtplib.SMTP_SSL(smtp.server, smtp.port) as service:
         service.login(smtp.user, smtp.password)
@@ -128,7 +131,7 @@ def get_list_of_articles(consumer_key: str, access_token: str) -> List[Dict[str,
     # really clear.
     articles = response["list"]
     if isinstance(articles, type({})):
-        return articles.values()
+        return articles.values()  # type: ignore
     if isinstance(articles, type([])):
         return articles
 
@@ -145,7 +148,7 @@ def process_and_send_emails(config: Config, _args: Namespace):
             url = article["resolved_url"]
             item_id = article["item_id"]
             print(f"  Processing article '{title}'")
-            with tempfile.NamedTemporaryFile() as tmpfile:
+            with tempfile.NamedTemporaryFile(suffix=".epub") as tmpfile:
                 extractor = run_in_docker(["extractor", url], stdout=PIPE)
                 epub_converter = run_in_docker(
                     [
@@ -155,7 +158,7 @@ def process_and_send_emails(config: Config, _args: Namespace):
                         "-t",
                         "epub",
                         "-o",
-                        tmpfile.name,
+                        "-",
                         "--metadata",
                         f"title={title}",
                     ],
@@ -166,12 +169,15 @@ def process_and_send_emails(config: Config, _args: Namespace):
                     print(
                         "Error during content extraction (readibility.js). Please look at the logs"
                     )
-                elif epub_converter.wait() != 0:
+                    continue
+                if epub_converter.wait() != 0:
                     print(
                         "Error during html -> epub conversion (pandoc). Please look at the logs"
                     )
-                else:
-                    send_epub_by_email(user, config.smtp, tmpfile.name)
+                    continue
+
+                tmpfile.seek(0)  # Rewind to be able to read the content
+                send_epub_by_email(user, config.smtp, tmpfile)
                 http_post_json(
                     "https://getpocket.com/v3/send",
                     {
@@ -242,6 +248,8 @@ if __name__ == "__main__":
     app_config = Config(app_args.config_file)
 
     if "func" not in app_args:
-        parser.exit(1, "Missing verb, rerun with --help for more information")
+        print("Missing verb, rerun with --help for more information")
+        parser.print_help()
+        parser.exit(1)
 
     app_args.func(app_config, app_args)

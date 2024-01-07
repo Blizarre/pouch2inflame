@@ -4,6 +4,9 @@ consumer_key = "YOUR_APP_KEY"
 # a successful authentication during the key generation process
 redirect_uri = "https://www.getpocket.com"
 
+sleep_between_articles = 10
+
+
 [smtp]
 server = "smtp.yourprovider.com"
 user = "YOUR_USER_NAME"

@@ -191,7 +191,7 @@ def process_and_send_emails(config: Config, _args: Namespace):
                             {
                                 "action": "archive",
                                 "item_id": item_id,
-                                "time": time.time(),
+                                "time": int(time.time()),
                             }
                         ],
                     },

@@ -14,6 +14,7 @@ from subprocess import PIPE, Popen
 from typing import IO, Any, Dict, List
 from urllib import request
 from urllib.parse import quote
+from urllib.error import HTTPError
 
 
 class UnexpectedPocketReponseException(BaseException):
@@ -79,8 +80,12 @@ def http_post_json(url: str, data: Any) -> Any:
     req.add_header("X-Accept", "application/json")
     data_bytes = json.dumps(data).encode()
 
-    with request.urlopen(req, data=data_bytes) as response:
-        return json.loads(response.read())
+    try:
+        with request.urlopen(req, data=data_bytes) as response:
+            return json.loads(response.read())
+    except HTTPError as e:
+        print("HTTP Error when processing the request:", e.fp.read())
+        raise e
 
 
 def run_in_docker(command: List[str], **kwargs) -> Popen[str]:

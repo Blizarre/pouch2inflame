@@ -134,6 +134,7 @@ def get_list_of_articles(consumer_key: str, access_token: str) -> List[Dict[str,
             "consumer_key": consumer_key,
             "access_token": access_token,
             "contentType": "article",
+            "state": "unread",
         },
     )
     # The API return either an empty list or a dict of values. The rules there aren't

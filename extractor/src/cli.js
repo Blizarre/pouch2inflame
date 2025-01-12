@@ -13,8 +13,23 @@ async function main(url) {
 
     let reader = new Readability.Readability(doc.window.document);
 
-    console.log(reader.parse().content)
+    await streamWriteAsync(process.stdout, reader.parse().content);
 }
+
+
+async function streamWriteAsync(stream, data) {
+    return new Promise((resolve, reject) => {
+        const callback = (err) => {
+            if (err) {
+                reject(err)
+            } else {
+                resolve(undefined);
+            }
+        };
+        stream.write(data, 'utf-8', callback);
+    });
+}
+
 
 main(process.argv[2])
     .then(() => {

@@ -1,3 +1,5 @@
+**Note:** *This project has been archived as I have moved on from the kindle ecosystem. I am now using the fabulous [koreader](https://github.com/koreader/koreader) with the [wallabag](https://wallabag.org/) integration.*
+
 # Pouch2Inflame
 
 Script and docker container to automatically send [pocket](https://www.getpocket.com) links to your [kindle](https://www.amazon.com/kindle/) by email.
